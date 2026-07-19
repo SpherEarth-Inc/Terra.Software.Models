@@ -57,7 +57,7 @@ class Command(BaseCommand):
         for old_name, new_name in PLATFORM_RENAMES.items():
             updated = Platform.objects.filter(name=old_name).update(name=new_name)
             if updated:
-                self.stdout.write(f'Renamed platform: {old_name} → {new_name}')
+                self.stdout.write(f'Renamed platform: {old_name} -> {new_name}')
 
         for name in PLATFORMS:
             platform, created = Platform.objects.update_or_create(
