@@ -3,10 +3,9 @@ from django.db import models
 
 
 class Platform(models.Model):
-    """A Spherearth platform/site (e.g. website, soccer_academy)."""
+    """A Spherearth platform/site (e.g. Website, Soccer Academy)."""
 
-    name = models.CharField(max_length=150)
-    slug = models.SlugField(max_length=100, unique=True, db_index=True)
+    name = models.CharField(max_length=150, unique=True, db_index=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

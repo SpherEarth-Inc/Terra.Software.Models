@@ -27,8 +27,8 @@ NEWS_EDITOR_PERMS = {
 PLATFORM_ADMIN_PERMS = {codename for codename, _ in PERMISSIONS}
 
 PLATFORMS = [
-    ('Website', 'website'),
-    ('Soccer Academy', 'soccer_academy'),
+    'Website',
+    'Soccer Academy',
 ]
 
 
@@ -48,13 +48,13 @@ class Command(BaseCommand):
                 f'{"Created" if created else "Updated"} permission: {name}'
             )
 
-        for name, slug in PLATFORMS:
+        for name in PLATFORMS:
             platform, created = Platform.objects.update_or_create(
-                slug=slug,
-                defaults={'name': name, 'is_active': True},
+                name=name,
+                defaults={'is_active': True},
             )
             self.stdout.write(
-                f'{"Created" if created else "Updated"} platform: {platform.slug}'
+                f'{"Created" if created else "Updated"} platform: {platform.name}'
             )
 
         news_editor, created = Role.objects.update_or_create(
