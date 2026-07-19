@@ -3,7 +3,7 @@ from django.db import models
 
 
 class Platform(models.Model):
-    """A Spherearth platform/site (e.g. Website, Soccer Academy)."""
+    """A Spherearth platform/site (e.g. website, soccer-academy). No spaces in name."""
 
     name = models.CharField(max_length=150, unique=True, db_index=True)
     is_active = models.BooleanField(default=True)

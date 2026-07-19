@@ -27,9 +27,15 @@ NEWS_EDITOR_PERMS = {
 PLATFORM_ADMIN_PERMS = {codename for codename, _ in PERMISSIONS}
 
 PLATFORMS = [
-    'Website',
-    'Soccer Academy',
+    'website',
+    'soccer-academy',
 ]
+
+# Rename legacy display names if present (no spaces going forward)
+PLATFORM_RENAMES = {
+    'Website': 'website',
+    'Soccer Academy': 'soccer-academy',
+}
 
 
 class Command(BaseCommand):
@@ -47,6 +53,11 @@ class Command(BaseCommand):
             self.stdout.write(
                 f'{"Created" if created else "Updated"} permission: {name}'
             )
+
+        for old_name, new_name in PLATFORM_RENAMES.items():
+            updated = Platform.objects.filter(name=old_name).update(name=new_name)
+            if updated:
+                self.stdout.write(f'Renamed platform: {old_name} → {new_name}')
 
         for name in PLATFORMS:
             platform, created = Platform.objects.update_or_create(
