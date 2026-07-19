@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.utils import timezone
@@ -91,3 +92,37 @@ class User(AbstractBaseUser):
 
     def __str__(self):
         return self.email
+
+
+class UserProfile(models.Model):
+    """Staff/user profile details and photo (photo path uses profile id)."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='profile',
+    )
+    first_name = models.CharField(max_length=100, blank=True)
+    middle_name = models.CharField(max_length=100, blank=True)
+    last_name = models.CharField(max_length=100, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    phone_number = models.CharField(max_length=40, blank=True)
+    job_title = models.CharField(max_length=150, blank=True)
+    photo_url = models.URLField(max_length=1000, blank=True, null=True)
+    photo_object_name = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'UserProfile'
+        verbose_name = 'User Profile'
+        verbose_name_plural = 'User Profiles'
+
+    def __str__(self):
+        name = ' '.join(p for p in (self.first_name, self.last_name) if p).strip()
+        return name or str(self.user)
+
+    @property
+    def display_name(self):
+        name = ' '.join(p for p in (self.first_name, self.last_name) if p).strip()
+        return name or self.user.email

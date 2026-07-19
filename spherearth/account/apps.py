@@ -6,3 +6,6 @@ class AccountConfig(AppConfig):
     name = 'spherearth.account'
     label = 'account'
     verbose_name = 'Account'
+
+    def ready(self):
+        from . import signals  # noqa: F401
