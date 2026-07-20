@@ -73,6 +73,7 @@ class Command(BaseCommand):
             name='News Editor',
             defaults={
                 'description': 'Can view/create/update news and upload media for a platform.',
+                'is_system': True,
             },
         )
         news_editor.permissions.set(
@@ -86,6 +87,7 @@ class Command(BaseCommand):
             name='Platform Admin',
             defaults={
                 'description': 'Full permissions for a single platform, including invites and players.',
+                'is_system': True,
             },
         )
         platform_admin.permissions.set(

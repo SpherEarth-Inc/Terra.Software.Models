@@ -26,6 +26,10 @@ class Role(models.Model):
 
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
+    is_system = models.BooleanField(
+        default=False,
+        help_text='Seeded/system roles cannot be deleted.',
+    )
     permissions = models.ManyToManyField(
         Permission,
         related_name='roles',
