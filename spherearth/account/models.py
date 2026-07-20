@@ -5,7 +5,7 @@ from django.utils import timezone
 
 
 class Permission(models.Model):
-    """Permission codename that can be assigned to roles (e.g. news.update)."""
+    """Permission codename (e.g. website.news.update, soccer.media.upload)."""
 
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
@@ -22,7 +22,7 @@ class Permission(models.Model):
 
 
 class Role(models.Model):
-    """Named set of permissions (e.g. News Editor, Platform Admin)."""
+    """Named set of permissions (e.g. Website News Editor, Soccer Admin)."""
 
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
@@ -79,7 +79,7 @@ class User(AbstractBaseUser):
     is_active = models.BooleanField(default=True)
     is_super_admin = models.BooleanField(
         default=False,
-        help_text='Bypasses platform membership checks; access to all platforms.',
+        help_text='Bypasses permission checks; full access to all products.',
     )
     date_joined = models.DateTimeField(default=timezone.now)
     last_login = models.DateTimeField(null=True, blank=True)
@@ -130,3 +130,82 @@ class UserProfile(models.Model):
     def display_name(self):
         name = ' '.join(p for p in (self.first_name, self.last_name) if p).strip()
         return name or self.user.email
+
+
+class StaffAccess(models.Model):
+    """
+    Staff access for a user: optional role plus additive extras on the user.
+    Product boundaries are encoded in permission names (website.* / soccer.*).
+    """
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='staff_access',
+    )
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.PROTECT,
+        related_name='staff_accesses',
+        null=True,
+        blank=True,
+        help_text='Optional permission bundle. Null means extras-only access.',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'StaffAccess'
+        verbose_name = 'Staff Access'
+        verbose_name_plural = 'Staff Access'
+
+    def __str__(self):
+        role_label = self.role.name if self.role_id else 'custom'
+        return f'{self.user} ({role_label})'
+
+    def role_permission_codenames(self) -> list[str]:
+        if not self.role_id:
+            return []
+        return sorted(self.role.permissions.values_list('name', flat=True))
+
+    def extra_permission_codenames(self) -> list[str]:
+        return sorted(
+            StaffPermission.objects.filter(user_id=self.user_id).values_list(
+                'permission__name', flat=True
+            )
+        )
+
+    def effective_permission_codenames(self) -> list[str]:
+        return sorted(
+            set(self.role_permission_codenames()) | set(self.extra_permission_codenames())
+        )
+
+
+class StaffPermission(models.Model):
+    """Direct permission grant on a staff user (additive extras beyond role)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='staff_permissions',
+    )
+    permission = models.ForeignKey(
+        Permission,
+        on_delete=models.PROTECT,
+        related_name='staff_grants',
+    )
+
+    class Meta:
+        db_table = 'StaffPermission'
+        verbose_name = 'Staff Permission'
+        verbose_name_plural = 'Staff Permissions'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'permission'],
+                name='uniq_staff_permission_user_permission',
+            ),
+        ]
+        ordering = ['permission__name']
+
+    def __str__(self):
+        return f'{self.user_id}: {self.permission.name}'

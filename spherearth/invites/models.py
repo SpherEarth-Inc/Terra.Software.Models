@@ -5,15 +5,10 @@ from django.db import models
 
 
 class StaffInvite(models.Model):
-    """Invite for a staff user to join a platform with a specific role."""
+    """Invite for a staff user with a specific role (product access via role perms)."""
 
     email = models.EmailField(db_index=True)
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
-    platform = models.ForeignKey(
-        'platforms.Platform',
-        on_delete=models.CASCADE,
-        related_name='invites',
-    )
     role = models.ForeignKey(
         'account.Role',
         on_delete=models.PROTECT,
@@ -37,7 +32,7 @@ class StaffInvite(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.email} → {self.platform} ({self.role})'
+        return f'{self.email} → {self.role}'
 
     @property
     def is_accepted(self) -> bool:

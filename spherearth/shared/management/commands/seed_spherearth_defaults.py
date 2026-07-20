@@ -2,45 +2,52 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from spherearth.account.models import Permission, Role
-from spherearth.platforms.models import Platform
 
 PERMISSIONS = [
-    ('news.view', 'View news'),
-    ('news.create', 'Create news'),
-    ('news.update', 'Update news'),
-    ('news.delete', 'Delete news'),
-    ('media.view', 'View media library'),
-    ('media.upload', 'Upload media'),
+    ('website.news.view', 'View website news'),
+    ('website.news.create', 'Create website news'),
+    ('website.news.update', 'Update website news'),
+    ('website.news.delete', 'Delete website news'),
+    ('website.media.view', 'View website media library'),
+    ('website.media.upload', 'Upload website media'),
+    ('soccer.news.view', 'View soccer news'),
+    ('soccer.news.create', 'Create soccer news'),
+    ('soccer.news.update', 'Update soccer news'),
+    ('soccer.news.delete', 'Delete soccer news'),
+    ('soccer.media.view', 'View soccer media library'),
+    ('soccer.media.upload', 'Upload soccer media'),
     ('staff.view', 'View staff / employees'),
-    ('staff.invite', 'Invite staff to a platform'),
-    ('players.view', 'View players'),
-    ('players.manage', 'Manage players'),
+    ('staff.invite', 'Invite staff'),
+    ('soccer.players.view', 'View soccer players'),
+    ('soccer.players.manage', 'Manage soccer players'),
 ]
 
-NEWS_EDITOR_PERMS = {
-    'news.view',
-    'news.create',
-    'news.update',
-    'media.view',
-    'media.upload',
+WEBSITE_NEWS_EDITOR_PERMS = {
+    'website.news.view',
+    'website.news.create',
+    'website.news.update',
+    'website.media.view',
+    'website.media.upload',
 }
 
-PLATFORM_ADMIN_PERMS = {codename for codename, _ in PERMISSIONS}
-
-PLATFORMS = [
-    'website',
-    'soccer-academy',
-]
-
-# Rename legacy display names if present (no spaces going forward)
-PLATFORM_RENAMES = {
-    'Website': 'website',
-    'Soccer Academy': 'soccer-academy',
+SOCCER_NEWS_EDITOR_PERMS = {
+    'soccer.news.view',
+    'soccer.news.create',
+    'soccer.news.update',
+    'soccer.media.view',
+    'soccer.media.upload',
 }
+
+SOCCER_ADMIN_PERMS = {
+    codename for codename, _ in PERMISSIONS if codename.startswith('soccer.')
+} | {'staff.view'}
+
+# Legacy role names to remove after product split
+LEGACY_ROLE_NAMES = ('News Editor', 'Platform Admin')
 
 
 class Command(BaseCommand):
-    help = 'Seed default platforms, permissions, and roles for Spherearth.'
+    help = 'Seed default website/soccer permissions and roles for Spherearth.'
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -55,46 +62,59 @@ class Command(BaseCommand):
                 f'{"Created" if created else "Updated"} permission: {name}'
             )
 
-        for old_name, new_name in PLATFORM_RENAMES.items():
-            updated = Platform.objects.filter(name=old_name).update(name=new_name)
-            if updated:
-                self.stdout.write(f'Renamed platform: {old_name} -> {new_name}')
+        # Drop obsolete platform-era permission codenames
+        obsolete = Permission.objects.exclude(
+            name__in=[n for n, _ in PERMISSIONS]
+        )
+        for perm in obsolete:
+            self.stdout.write(f'Removing obsolete permission: {perm.name}')
+            perm.delete()
 
-        for name in PLATFORMS:
-            platform, created = Platform.objects.update_or_create(
-                name=name,
-                defaults={'is_active': True},
-            )
-            self.stdout.write(
-                f'{"Created" if created else "Updated"} platform: {platform.name}'
-            )
+        for legacy in LEGACY_ROLE_NAMES:
+            deleted, _ = Role.objects.filter(name=legacy).delete()
+            if deleted:
+                self.stdout.write(f'Removed legacy role: {legacy}')
 
-        news_editor, created = Role.objects.update_or_create(
-            name='News Editor',
+        website_editor, created = Role.objects.update_or_create(
+            name='Website News Editor',
             defaults={
-                'description': 'Can view/create/update news and upload media for a platform.',
+                'description': 'Can view/create/update website news and upload website media.',
                 'is_system': True,
             },
         )
-        news_editor.permissions.set(
-            [perm_by_name[n] for n in NEWS_EDITOR_PERMS]
+        website_editor.permissions.set(
+            [perm_by_name[n] for n in WEBSITE_NEWS_EDITOR_PERMS]
         )
         self.stdout.write(
-            f'{"Created" if created else "Updated"} role: {news_editor.name}'
+            f'{"Created" if created else "Updated"} role: {website_editor.name}'
         )
 
-        platform_admin, created = Role.objects.update_or_create(
-            name='Platform Admin',
+        soccer_editor, created = Role.objects.update_or_create(
+            name='Soccer News Editor',
             defaults={
-                'description': 'Full permissions for a single platform, including invites and players.',
+                'description': 'Can view/create/update soccer news and upload soccer media.',
                 'is_system': True,
             },
         )
-        platform_admin.permissions.set(
-            [perm_by_name[n] for n in PLATFORM_ADMIN_PERMS]
+        soccer_editor.permissions.set(
+            [perm_by_name[n] for n in SOCCER_NEWS_EDITOR_PERMS]
         )
         self.stdout.write(
-            f'{"Created" if created else "Updated"} role: {platform_admin.name}'
+            f'{"Created" if created else "Updated"} role: {soccer_editor.name}'
+        )
+
+        soccer_admin, created = Role.objects.update_or_create(
+            name='Soccer Admin',
+            defaults={
+                'description': 'Full soccer product permissions, including players and staff view.',
+                'is_system': True,
+            },
+        )
+        soccer_admin.permissions.set(
+            [perm_by_name[n] for n in SOCCER_ADMIN_PERMS]
+        )
+        self.stdout.write(
+            f'{"Created" if created else "Updated"} role: {soccer_admin.name}'
         )
 
         self.stdout.write(self.style.SUCCESS('Spherearth defaults seeded.'))
