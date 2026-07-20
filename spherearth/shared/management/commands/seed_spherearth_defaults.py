@@ -11,6 +11,7 @@ PERMISSIONS = [
     ('news.delete', 'Delete news'),
     ('media.view', 'View media library'),
     ('media.upload', 'Upload media'),
+    ('staff.view', 'View staff / employees'),
     ('staff.invite', 'Invite staff to a platform'),
     ('players.view', 'View players'),
     ('players.manage', 'Manage players'),
